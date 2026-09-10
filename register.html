@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Registration</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+
+        <h1>Smart Attendance System</h1>
+
+        <button onclick="goDashboard()">
+            Dashboard
+        </button>
+
+    </header>
+
+
+    <main>
+
+        <div class="card">
+
+            <h2>Student Registration</h2>
+
+            <p>Enter Student Details</p>
+
+
+            <input type="text" id="studentId" placeholder="Student ID">
+
+
+            <input type="text" id="studentName" placeholder="Student Name">
+
+
+            <input type="text" id="roll" placeholder="Roll Number">
+
+
+            <input type="text" id="department" placeholder="Department">
+
+
+            <input type="text" id="semester" placeholder="Semester">
+
+
+            <input type="number" id="fingerprintId" placeholder="Fingerprint ID">
+
+
+            <br><br>
+
+            <button onclick="registerStudent()">
+                Register Student
+            </button>
+
+        </div>
+
+    </main>
+
+
+    <script>
+        if (sessionStorage.getItem("loggedIn") !== "true") {
+            window.location.href = "index.html";
+        }
+
+        function registerStudent() {
+
+            let id = document.getElementById("studentId").value;
+            let name = document.getElementById("studentName").value;
+            let roll = document.getElementById("roll").value;
+            let department = document.getElementById("department").value;
+            let semester = document.getElementById("semester").value;
+            let fingerprint = document.getElementById("fingerprintId").value;
+
+            if (id === "" || name === "" || roll === "" || fingerprint === "") {
+                alert("Please fill all required fields!");
+                return;
+            }
+
+            let student = {
+                id: id,
+                name: name,
+                roll: roll,
+                department: department,
+                semester: semester,
+                fingerprint: fingerprint
+            };
+
+            let students =
+                JSON.parse(localStorage.getItem("students")) || [];
+
+            // Duplicate check
+            let duplicate = students.some(function (s) {
+                return s.id === id ||
+                    s.fingerprint === fingerprint;
+            });
+
+            if (duplicate) {
+                alert("Student ID or Fingerprint ID already exists! ❌");
+                return;
+            }
+
+            students.push(student);
+
+            localStorage.setItem(
+                "students",
+                JSON.stringify(students)
+            );
+
+            localStorage.setItem("students", JSON.stringify(students));
+
+            alert("Student Registered Successfully!");
+
+            document.getElementById("studentId").value = "";
+            document.getElementById("studentName").value = "";
+            document.getElementById("roll").value = "";
+            document.getElementById("department").value = "";
+            document.getElementById("semester").value = "";
+            document.getElementById("fingerprintId").value = "";
+        }
+
+
+        function goDashboard() {
+
+            window.location.href = "dashboard.html";
+
+        }
+
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Attendance Dashboard</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+    <!-- Header -->
+
+    <header>
+
+        <h1>Smart Attendance System</h1>
+
+        <button onclick="logout()">Logout</button>
+
+    </header>
+
+
+    <!-- Dashboard -->
+
+    <main>
+
+        <h2>Dashboard</h2>
+
+        <button onclick="goRegister()">
+            Register Student
+        </button>
+
+
+        <button onclick="goAttendanceHistory()">
+            Attendance History
+        </button>
+
+
+        <!-- Statistics -->
+
+        <div class="stats">
+
+            <div class="stat-card">
+
+                <h3>Total Students</h3>
+
+                <p id="totalStudents">0</p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <h3>Present Today</h3>
+
+                <p id="presentCount">0</p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <h3>Absent Today</h3>
+
+                <p id="absentCount">0</p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <h3>Attendance</h3>
+
+                <p id="attendancePercent">0%</p>
+            </div>
+
+        </div>
+
+
+        <!-- Student Information -->
+
+        <div class="card">
+
+            <h2>Fingerprint Attendance</h2>
+
+            <p>Place your finger on the fingerprint sensor.</p>
+
+            <button onclick="scanFingerprint()">
+
+                Scan Fingerprint
+
+            </button>
+
+        </div>
+
+
+        <!-- Attendance Table -->
+        <div class="card">
+
+            <h2>Registered Students</h2>
+            <input type="text" id="studentSearch" placeholder="Search Student by ID, Name or Roll"
+                onkeyup="searchStudents()">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Roll</th>
+                        <th>Department</th>
+                        <th>Semester</th>
+                        <th>Fingerprint ID</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="studentTable">
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="card">
+
+            <h2>Today's Attendance</h2>
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Student ID</th>
+
+                        <th>Name</th>
+
+                        <th>Roll</th>
+
+                        <th>Date</th>
+
+                        <th>Time</th>
+
+                        <th>Status</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="attendanceTable">
+                </tbody>
+
+
+
+
+            </table>
+
+        </div>
+
+    </main>
+
+
+    <script>
+        if (sessionStorage.getItem("loggedIn") !== "true") {
+            window.location.href = "index.html";
+        }
+
+        function scanFingerprint() {
+            let fingerprintId = prompt("Enter Fingerprint ID:");
+
+            if (fingerprintId === null || fingerprintId === "") {
+                return;
+            }
+
+            let students =
+                JSON.parse(localStorage.getItem("students")) || [];
+
+            let student = students.find(function (s) {
+                return s.fingerprint == fingerprintId;
+            });
+
+            if (!student) {
+                alert("Fingerprint Not Registered!");
+                return;
+            }
+
+            let attendance =
+                JSON.parse(localStorage.getItem("attendance")) || [];
+
+            let today =
+                new Date().toISOString().split("T")[0];
+
+            let alreadyPresent = attendance.some(function (record) {
+                return record.id === student.id &&
+                    record.date === today;
+            });
+
+            if (alreadyPresent) {
+                alert(
+                    student.name +
+                    " is already marked PRESENT today! ✅"
+                );
+                return;
+            }
+
+            let now = new Date();
+
+            let time = now.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+
+            attendance.push({
+                id: student.id,
+                name: student.name,
+                roll: student.roll,
+                date: today,
+                time: time,
+                status: "Present"
+            });
+
+            localStorage.setItem(
+                "attendance",
+                JSON.stringify(attendance)
+            );
+
+            loadAttendance();
+            updateStats();
+
+            alert(
+                "Attendance Marked Successfully! ✅\n\n" +
+                "Name: " + student.name + "\n" +
+                "Student ID: " + student.id + "\n" +
+                "Time: " + time
+            );
+        }
+
+
+
+        function loadAttendance() {
+            let attendance =
+                JSON.parse(localStorage.getItem("attendance")) || [];
+
+            let table =
+                document.getElementById("attendanceTable");
+
+            table.innerHTML = "";
+
+            attendance.forEach(function (record) {
+
+                let row = `
+            <tr>
+                <td>${record.id}</td>
+                <td>${record.name}</td>
+                <td>${record.roll}</td>
+                <td>${record.date || "Today"}</td>
+                <td>${record.time}</td>
+                <td>${record.status}</td>
+            </tr>
+        `;
+
+                table.innerHTML += row;
+            });
+        }
+
+
+        function updateStats() {
+            let attendance =
+                JSON.parse(localStorage.getItem("attendance")) || [];
+
+            let students =
+                JSON.parse(localStorage.getItem("students")) || [];
+
+            let total = students.length;
+
+            // আজকের date
+            let today = new Date().toISOString().split("T")[0];
+
+            // আজ যারা Present
+            let todayAttendance = attendance.filter(function (record) {
+                return String(record.date) === String(today);
+            });
+
+            let present = todayAttendance.length;
+
+            let absent = total - present;
+
+            if (absent < 0) {
+                absent = 0;
+            }
+
+            let percentage = 0;
+
+            if (total > 0) {
+                percentage = Math.round((present / total) * 100);
+            }
+
+            document.getElementById("totalStudents").innerText =
+                total;
+
+            document.getElementById("presentCount").innerText =
+                present;
+
+            document.getElementById("absentCount").innerText =
+                absent;
+
+            document.getElementById("attendancePercent").innerText =
+                percentage + "%";
+        }
+
+
+
+        function loadStudents() {
+
+            let students =
+                JSON.parse(localStorage.getItem("students")) || [];
+
+            let table =
+                document.getElementById("studentTable");
+
+            table.innerHTML = "";
+
+
+            students.forEach(function (student) {
+
+                let row = `
+            <tr>
+                <td>${student.id}</td>
+                <td>${student.name}</td>
+                <td>${student.roll}</td>
+                <td>${student.department}</td>
+                <td>${student.semester}</td>
+                <td>${student.fingerprint}</td>
+                <td><button onclick="editStudent('${student.id}')">
+    Edit
+</button>
+    <button onclick="deleteStudent('${student.id}')">
+        Delete
+    </button>
+</td>
+            </tr>
+        `;
+
+                table.innerHTML += row;
+
+            });
+        }
+
+
+
+        function logout() {
+            sessionStorage.removeItem("loggedIn");
+            window.location.href = "index.html";
+        }
+
+
+        function goRegister() {
+
+            window.location.href = "register.html";
+
+        }
+
+        function goAttendanceHistory() {
+            window.location.href = "attendance.html";
+        }
+
+
+        loadStudents();
+
+        loadAttendance();
+
+        updateStats();
+        function searchStudents() {
+
+            let search =
+                document.getElementById("studentSearch").value.toLowerCase();
+
+            let students =
+                JSON.parse(localStorage.getItem("students")) || [];
+
+            let table =
+                document.getElementById("studentTable");
+
+            table.innerHTML = "";
+
+            students.forEach(function (student) {
+
+                if (
+                    student.id.toLowerCase().includes(search) ||
+                    student.name.toLowerCase().includes(search) ||
+                    student.roll.toLowerCase().includes(search)
+                ) {
+
+                    let row = `
+                <tr>
+                    <td>${student.id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.roll}</td>
+                    <td>${student.department}</td>
+                    <td>${student.semester}</td>
+                    <td>${student.fingerprint}</td>
+                </tr>
+            `;
+
+                    table.innerHTML += row;
+                }
+            });
+        }
+
+
+        function deleteStudent(studentId) {
+
+            let confirmDelete =
+                confirm("Are you sure you want to delete this student?");
+
+            if (!confirmDelete) {
+                return;
+            }
+
+            // Student data
+            let students =
+                JSON.parse(localStorage.getItem("students")) || [];
+
+            students = students.filter(function (student) {
+                return student.id !== studentId;
+            });
+
+            localStorage.setItem(
+                "students",
+                JSON.stringify(students)
+            );
+
+
+            // Attendance data
+            let attendance =
+                JSON.parse(localStorage.getItem("attendance")) || [];
+
+            attendance = attendance.filter(function (record) {
+                return record.id !== studentId;
+            });
+
+            localStorage.setItem(
+                "attendance",
+                JSON.stringify(attendance)
+            );
+
+
+            // Refresh dashboard
+            loadStudents();
+            loadAttendance();
+            updateStats();
+
+            alert("Student and Attendance Deleted Successfully! ✅");
+        }
+
+
+        function editStudent(studentId) {
+
+            let students =
+                JSON.parse(localStorage.getItem("students")) || [];
+
+            let student = students.find(function (s) {
+                return s.id === studentId;
+            });
+
+            if (!student) {
+                alert("Student not found!");
+                return;
+            }
+
+            let newName = prompt("Enter Student Name:", student.name);
+
+            if (newName === null) {
+                return;
+            }
+
+            let newRoll = prompt("Enter Roll Number:", student.roll);
+
+            if (newRoll === null) {
+                return;
+            }
+
+            let newDepartment =
+                prompt("Enter Department:", student.department);
+
+            if (newDepartment === null) {
+                return;
+            }
+
+            let newSemester =
+                prompt("Enter Semester:", student.semester);
+
+            let newFingerprint =
+                prompt("Enter Fingerprint ID:", student.fingerprint);
+
+            if (newFingerprint === null) return;
+
+            student.name = newName;
+            student.roll = newRoll;
+            student.department = newDepartment;
+            student.semester = newSemester;
+            let duplicateFingerprint = students.some(function (s) {
+                return s.id !== studentId &&
+                    s.fingerprint === newFingerprint;
+            });
+
+            if (duplicateFingerprint) {
+                alert("This Fingerprint ID is already assigned to another student! ❌");
+                return;
+            }
+
+
+            student.fingerprint = newFingerprint;
+
+            localStorage.setItem(
+                "students",
+                JSON.stringify(students)
+            );
+
+            loadStudents();
+
+            alert("Student Updated Successfully! ✅");
+        }
+
+
+
+    </script>
+
+</body>
+
+</html>

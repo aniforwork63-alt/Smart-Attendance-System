@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Attendance History</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Attendance History</h1>
+
+        <button onclick="goDashboard()">
+            Dashboard
+        </button>
+    </header>
+
+    <main>
+
+        <h2>Attendance Records</h2>
+
+        <div class="card">
+            <input type="text" id="studentFilter" placeholder="Search Student ID or Name"
+                onkeyup="filterStudentAttendance()">
+
+            <input type="date" id="dateFilter" onchange="filterAttendance()">
+
+            <button onclick="showAllAttendance()">
+                Show All
+            </button>
+
+            <button onclick="exportAttendance()">
+                Export Attendance
+            </button>
+
+            <br><br>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Roll</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="historyTable">
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </main>
+
+
+    <script>
+        if (sessionStorage.getItem("loggedIn") !== "true") {
+            window.location.href = "index.html";
+        }
+
+        function goDashboard() {
+            window.location.href = "dashboard.html";
+        }
+
+
+        function loadHistory() {
+
+            let attendance =
+                JSON.parse(localStorage.getItem("attendance")) || [];
+
+            let table =
+                document.getElementById("historyTable");
+
+            table.innerHTML = "";
+
+            attendance.forEach(function (record) {
+
+                let row = `
+            <tr>
+                <td>${record.id}</td>
+                <td>${record.name}</td>
+                <td>${record.roll}</td>
+                <td>${record.date || "N/A"}</td>
+                <td>${record.time}</td>
+                <td>${record.status}</td>
+            </tr>
+        `;
+
+                table.innerHTML += row;
+            });
+        }
+
+
+        function filterAttendance() {
+
+            let selectedDate =
+                document.getElementById("dateFilter").value;
+
+            let search =
+                document.getElementById("studentFilter").value.toLowerCase();
+
+            let attendance =
+                JSON.parse(localStorage.getItem("attendance")) || [];
+
+            let table =
+                document.getElementById("historyTable");
+
+            table.innerHTML = "";
+
+            attendance.forEach(function (record) {
+
+                let dateMatch =
+                    selectedDate === "" || record.date === selectedDate;
+
+                let studentMatch =
+                    search === "" ||
+                    record.id.toLowerCase().includes(search) ||
+                    record.name.toLowerCase().includes(search);
+
+                if (dateMatch && studentMatch) {
+
+                    let row = `
+                <tr>
+                    <td>${record.id}</td>
+                    <td>${record.name}</td>
+                    <td>${record.roll}</td>
+                    <td>${record.date || "N/A"}</td>
+                    <td>${record.time}</td>
+                    <td>${record.status}</td>
+                </tr>
+            `;
+
+                    table.innerHTML += row;
+                }
+            });
+        }
+
+
+        function filterStudentAttendance() {
+            filterAttendance();
+        }
+
+        function showAllAttendance() {
+
+            document.getElementById("dateFilter").value = "";
+            document.getElementById("studentFilter").value = "";
+
+            loadHistory();
+        }
+
+
+        loadHistory();
+
+        function exportAttendance() {
+
+            let attendance =
+                JSON.parse(localStorage.getItem("attendance")) || [];
+
+            let selectedDate =
+                document.getElementById("dateFilter").value;
+
+            let search =
+                document.getElementById("studentFilter").value.toLowerCase();
+
+            // Filter records
+            let filteredAttendance = attendance.filter(function (record) {
+
+                let dateMatch =
+                    selectedDate === "" ||
+                    record.date === selectedDate;
+
+                let studentMatch =
+                    search === "" ||
+                    record.id.toLowerCase().includes(search) ||
+                    record.name.toLowerCase().includes(search);
+
+                return dateMatch && studentMatch;
+            });
+
+
+            if (filteredAttendance.length === 0) {
+                alert("No attendance records found! ❌");
+                return;
+            }
+
+
+            let csv =
+                "Student ID,Name,Roll,Date,Time,Status\n";
+
+
+            filteredAttendance.forEach(function (record) {
+
+                csv +=
+                    record.id + "," +
+                    record.name + "," +
+                    record.roll + "," +
+                    (record.date || "") + "," +
+                    record.time + "," +
+                    record.status + "\n";
+            });
+
+
+            let blob = new Blob([csv], {
+                type: "text/csv"
+            });
+
+
+            let url = URL.createObjectURL(blob);
+
+            let link = document.createElement("a");
+
+            link.href = url;
+
+            link.download = "attendance.csv";
+
+            link.click();
+
+            URL.revokeObjectURL(url);
+        }
+
+    </script>
+
+</body>
+
+</html>
